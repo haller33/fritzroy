@@ -5,12 +5,17 @@
     (pmatch expr
 	    [,n (guard (number? n))
 		n]
+	    [#t
+	     #t]
+	    [#f
+	     #f]
 	    [(zero? ,e)
 	     (zero? (eval-expr e env))]
 	    [(add1 ,e)
 	     (add1 (eval-expr e env))]
 	    [(sub1 ,e)
 	     (sub1 (eval-expr e env))]
+
 	    [(* ,e1 ,e2)
 	     (* (eval-expr e1 env)
 		(eval-expr e2 env))]
