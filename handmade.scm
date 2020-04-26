@@ -4,13 +4,13 @@
 ;; this is my own definition of Meta Circular Evaluator.
 ;;
 
-(define (inenv exp env)
+(define (inenv? exp env)
   (define (ienvaps exp env acc)
     (if (or (null? env) acc)
 	acc
 	(ienvaps exp (cdr env)
 		 (or (eqv? (caar env) exp)
-		      acc))))
+		     acc))))
   (ienvaps exp env #f))
 
 
@@ -26,7 +26,9 @@
 	((number? exp)
 	 exp)
 	((inenv? exp env)
-	 (extraenv exp env))
+	 (extraenv (evale exp env)))
+	((eqv? (car exp) 'quot)
+	 exp)
 	((eqv? (car exp) '==)
 	 (eqv? (evale (cadr exp) env)
 	       (evale (caddr exp) env)))
@@ -47,7 +49,11 @@
 	     (evale (caddr exp) env)))
 	((eqv? (car exp) 'cons)
 	 (cons (evale (cadr exp) env)
-	       (evale (caddr exp) env)))))
+	       (evale (caddr exp) env)))
+	(#t
+	 (write 'error)
+	 (write exp)
+	 (write env))))
 
 
 ;; debug mode
@@ -55,8 +61,8 @@
 
 (let ((n
 
-       (evale 'n 
-	      '((n nil)))))
+       (evale 'n
+	      '((n 5)))))
   
   (format #t "~A~%" n))
 
