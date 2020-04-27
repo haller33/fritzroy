@@ -1,6 +1,7 @@
-#!/data/data/com.termux/files/usr/bin/guile -s
-!#
-;;#! /nix/store/jw2522hjypr3dv8v2sjk8gmk4jywi43w-user-environment/bin/scheme --script
+#! /nix/store/jw2522hjypr3dv8v2sjk8gmk4jywi43w-user-environment/bin/scheme --script
+;;#!/data/data/com.termux/files/usr/bin/guile -s
+;;!#
+
 
 ;;;
 ;; this is my own definition of Meta Circular Evaluator.
@@ -115,8 +116,17 @@
 	((eqv? (car exp) 'cons)
 	 (cons (evale (cadr exp) env)
 	       (evale (caddr exp) env)))
-	((eqv? (car exp) 'system-gc)
+	((eqv? (car exp) '\,env)
+	 (write env)
+	 (evale 'nil env))
+	((eqv? (car exp) '\,gc)
 	 (evale '(quot gc) (gc env)))
+	
+	((and (symbol? (car exp))
+	      (symbol? (cadr exp))
+	      (null? (cddr exp)))
+	 (applye (list (evale (car exp) env)
+		       (evale (cdr exp) env))))
 
 	(#t
 	 (write 'error)
@@ -125,26 +135,27 @@
 	 'nil)))
 
 
+(define (applye exp env)
+  (cond ((and (eqv? (caaar exp) '<PROCEDURE>)
+	     (eqv? (cadar exp) '<PROCEDURE>))
+	 (cons 'let
+	       (list exp)))))
+		 
+
+
 ;; debug mode
-;; (trace evale)
-;; (trace inenv?)
-;; (trace extraenv)
-;; (trace insidenv)
-;; (trace outsidenv)
-;; (trace gc)
-
-;;(let ((n
-;;       (evale '()
-;;	      '((j 88)(n 5)))))
-;;  (format #t "~A~%" n))
+(trace evale)
+(trace inenv?)
+(trace extraenv)
+(trace insidenv)
+(trace outsidenv)
+(trace gc)
 
 
-(define (evil env)
-  (format #t "evil > ")
-  (force-output)
-  (let ((val (read)))
-    (let ((awnser (evale val env)))
-      (format #t "~A~%" awnser)))
-  (evil env))
+(let ((n
+       (evale '(\,env)
+	      '((j 88)(n 5)))))
+  (format #t "~A~%" n))
 
-(evil '())
+
+
