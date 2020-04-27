@@ -1,6 +1,7 @@
-#! /nix/store/jw2522hjypr3dv8v2sjk8gmk4jywi43w-user-environment/bin/scheme --script
-;;##!/data/data/com.termux/files/usr/bin/guile -s
-;;!#
+#!/data/data/com.termux/files/usr/bin/guile -s
+!#
+;;#! /nix/store/jw2522hjypr3dv8v2sjk8gmk4jywi43w-user-environment/bin/scheme --script
+
 
 ;;;
 ;; this is my own definition of Meta Circular Evaluator.
@@ -22,12 +23,18 @@
       (extraenv exp (cdr env))))
 
 
-(define (insidenv add env)
-  (if (null? add)
+(define (insidenv frame env)
+  (if (or (null? frame) (number? frame))
       env
-      (insidenv (cdr add)
-		(cons (car add)
+      (insidenv (cdr frame)
+		(cons (car frame)
 		      env))))
+
+(define (outsidenv frame env)
+  (if (or (null? frame) (= frame 0))
+      env
+      (insidenv (- frame 1)
+		(cdr env))))
 
 (define (gc env)
   (define (exist? item lst)
@@ -44,12 +51,13 @@
   (gc-aps env (list (car env))))
 
 (define (dothis exp env)
-  (if (atom? exp))) ;; TODO
+  ;;(if (atom? exp))) ;; TODO
+  '())
       
   
 (define (evale exp env)
   (cond ((eqv? exp 'nil)
-	 '())
+55	 '())
 	((eqv? exp '#f)
 	 #f)
 	((eqv? exp '#t)
@@ -64,18 +72,21 @@
 	 (dothis (list (cdr exp)) env))
 	((eqv? (car exp) 'set)
 	 (evale (caddr exp)
-		(cons (cons (cadr exp)
+		(cons (list (cadr exp)
 			    (evale (caddr exp) env))
 		      env)))
-	((eqv? (car exp) 'let)
-	 (evale (caddr exp)
-		(insidenv (cadr exp) env)))
+	((eqv? (car exp) 'let) ;; TODO
+	 (evale (evale (caddr exp)
+		       (insidenv (cadr exp) env))
+		(outsidenv (length (cadr exp)) env)))
 	((eqv? (car exp) 'lambda)
 	 (cons '<PROCEDURE>
 	       (list (caddr exp)
 		     (cadr exp))))
 	((eqv? (car exp) 'quot)
 	 exp)
+	((eqv? (car exp) 'eval)
+	 (evale (cadadr exp) '()))
 	((eqv? (car exp) '==)
 	 (eqv? (evale (cadr exp) env)
 	       (evale (caddr exp) env)))
@@ -107,17 +118,14 @@
 
 
 ;; debug mode
-(trace evale)
-(trace inenv?)
-(trace extraenv)
-(trace insidenv)
+;; (trace evale)
+;; (trace inenv?)
+;; (trace extraenv)
+;; (trace insidenv)
 
 (let ((n
        
-       (evale '(let ((n 3)(j 3)(d 4))
-		 (let ((d n))
-		   (sub1 d j)
-		   (system-gc)))
+       (evale '(eval (quot 5))
 
 	      '((j 88)(n 5)))))
   
