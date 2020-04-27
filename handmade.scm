@@ -1,6 +1,6 @@
-#!/data/data/com.termux/files/usr/bin/guile -s
-!#
 ;;#! /nix/store/jw2522hjypr3dv8v2sjk8gmk4jywi43w-user-environment/bin/scheme --script
+;;#!/data/data/com.termux/files/usr/bin/guile -s
+;;!#
 
 
 ;;;
@@ -31,9 +31,9 @@
 		      env))))
 
 (define (outsidenv frame env)
-  (if (or (null? frame) (= frame 0))
+  (if (or (null? env) (number? frame))
       env
-      (insidenv (- frame 1)
+      (insidenv (cdr frame)
 		(cdr env))))
 
 (define (gc env)
@@ -57,11 +57,13 @@
   
 (define (evale exp env)
   (cond ((eqv? exp 'nil)
-55	 '())
+	 '())
 	((eqv? exp '#f)
 	 #f)
 	((eqv? exp '#t)
 	 #t)
+	((string? exp)
+	 exp)
         ((null? exp)
 	 'nil)
 	((number? exp)
@@ -75,10 +77,11 @@
 		(cons (list (cadr exp)
 			    (evale (caddr exp) env))
 		      env)))
-	((eqv? (car exp) 'let) ;; TODO
-	 (evale (evale (caddr exp)
-		       (insidenv (cadr exp) env))
-		(outsidenv (length (cadr exp)) env)))
+	((eqv? (car exp) 'let)
+	 (evale (caddr exp)
+		(insidenv (cadr exp) env))
+	 (evale 'nil (outsidenv (cadr exp) env))
+	 'nil)
 	((eqv? (car exp) 'lambda)
 	 (cons '<PROCEDURE>
 	       (list (caddr exp)
@@ -87,6 +90,9 @@
 	 exp)
 	((eqv? (car exp) 'eval)
 	 (evale (cadadr exp) '()))
+	((eqv? (car exp) 'write)
+	 (write	(evale (cadr exp) env))
+	 'nil)
 	((eqv? (car exp) '==)
 	 (eqv? (evale (cadr exp) env)
 	       (evale (caddr exp) env)))
@@ -97,6 +103,9 @@
 	 (< (evale (cadr exp) env)
 	    (evale (caddr exp) env)))
 	((eqv? (car exp) 'sub1)
+	 (- (evale (caddr exp) env)
+	    (evale (cadr exp) env)))
+	((eqv? (car exp) 'some1)
 	 (+ (evale (cadr exp) env)
 	    (evale (caddr exp) env)))
 	((eqv? (car exp) 'mult1)
@@ -114,18 +123,23 @@
 	(#t
 	 (write 'error)
 	 (write exp)
-	 (write env))))
+	 (write env)
+	 'nil)))
 
 
 ;; debug mode
-;; (trace evale)
-;; (trace inenv?)
-;; (trace extraenv)
-;; (trace insidenv)
+(trace evale)
+(trace inenv?)
+(trace extraenv)
+(trace insidenv)
+(trace outsidenv)
+(trace gc)
 
 (let ((n
        
-       (evale '(eval (quot 5))
+       (evale '(eval (quot (let ((s 10)(m 8))
+			     (let ((h 2))
+			       (cons m (cons (sub1 s h) nil))))))
 
 	      '((j 88)(n 5)))))
   
