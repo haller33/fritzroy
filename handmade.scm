@@ -1,10 +1,10 @@
-#! /nix/store/jw2522hjypr3dv8v2sjk8gmk4jywi43w-user-environment/bin/scheme --script
-;;#!/data/data/com.termux/files/usr/bin/guile -s
-;;!#
+#!/data/data/com.termux/files/usr/bin/guile -s
+!#
+;; #! /nix/store/jw2522hjypr3dv8v2sjk8gmk4jywi43w-user-environment/bin/scheme --script
 
 
 ;;;
-;; this is my own definition of Meta Circular Evaluator.
+;; this is my own definition of Meta Circular Evaluator
 ;;
 
 (define (inenv? exp env)
@@ -51,10 +51,11 @@
   (gc-aps env (list (car env))))
 
 (define (dothis exp env)
-  ;;(if (atom? exp))) ;; TODO
-  '())
-      
-  
+  (if (null? (cdr exp))
+      (caar exp)
+      (evale 'nil env)))
+
+
 (define (evale exp env)
   (cond ((eqv? exp 'nil)
 	 '())
@@ -71,24 +72,36 @@
 	((inenv? exp env)
 	 (evale (extraenv exp env) env))
 	((eqv? (car exp) 'do) ;; TODO
-	 (dothis (list (cdr exp)) env))
+	 (dothis (cdr exp) env))
 	((eqv? (car exp) 'set)
 	 (evale (caddr exp)
 		(cons (list (cadr exp)
 			    (evale (caddr exp) env))
 		      env)))
+	
 	((eqv? (car exp) 'let)
-	 (evale (caddr exp)
-		(insidenv (cadr exp) env))
-	 (evale '() (outsidenv (cadr exp) env)))
+	 (evale (evale (caddr exp)
+		       (insidenv (cadr exp) env))
+		(outsidenv (cadr exp) env)))
+	
 	((eqv? (car exp) 'lambda)
 	 (cons '<PROCEDURE>
 	       (list (caddr exp)
 		     (cadr exp))))
+	((eqv? (car exp) 'define)
+	 (evale (if (list? (cadr exp))
+		    'nil
+		    (cons 'set
+			  (list (cadr exp)
+				(caddr exp))))
+		env))
 	((eqv? (car exp) 'quot)
-	 exp)
+	 (cadr exp))
 	((eqv? (car exp) 'eval)
 	 (evale (cadadr exp) '()))
+	((eqv? (car exp) 'evil)
+	 (evale (cadadr exp)
+		(evale (cadddr exp) env)))
 	((eqv? (car exp) 'write)
 	 (write	(evale (cadr exp) env))
 	 'nil)
@@ -113,14 +126,21 @@
 	((eqv? (car exp) 'if)
 	 (if (evale (cadr exp) env)
 	     (evale (caddr exp) env)))
+	((eqv? (car exp) 'list)
+	 (list (evale (cadr exp) env)
+	       (evale (caddr exp) env)))
 	((eqv? (car exp) 'cons)
 	 (cons (evale (cadr exp) env)
-	       (evale (caddr exp) env)))
-	((eqv? (car exp) '\,env)
-	 (write env)
-	 (evale 'nil env))
-	((eqv? (car exp) '\,gc)
-	 (evale '(quot gc) (gc env)))
+	       (caddr exp)))
+	((eqv? (car exp) 'car)
+	 (car (evale (cadr exp) env)))
+	((eqv? (car exp) 'cdr)
+	 (cdr (evale (cadr exp) env)))
+	((eqv? (car exp) 'system-env)
+      	 (evale (list 'quot
+		      env) env))
+	((eqv? (car exp) 'system-gc)
+	 (evale 'nil (gc env)))
 	
 	((and (symbol? (car exp))
 	      (symbol? (cadr exp))
@@ -136,24 +156,26 @@
 
 
 (define (applye exp env)
-  (cond ((and (eqv? (caaar exp) '<PROCEDURE>)
-	     (eqv? (cadar exp) '<PROCEDURE>))
-	 (cons 'let
-	       (list exp)))))
+  (cond ((eqv? (caaar exp) '<PROCEDURE>)
+	 (evale (cons 'let
+		      (list (list (cadddr exp))
+			    (caddr exp)) env)))))
 		 
 
 
 ;; debug mode
-(trace evale)
-(trace inenv?)
-(trace extraenv)
-(trace insidenv)
-(trace outsidenv)
-(trace gc)
+;; (trace evale)
+;; (trace inenv?)
+;; (trace extraenv)
+;; (trace insidenv)
+;; (trace outsidenv)
+;; (trace gc)
 
 
 (let ((n
-       (evale '(\,env)
+       (evale '(let ((n 88))
+		 (define g 77))
+	      
 	      '((j 88)(n 5)))))
   (format #t "~A~%" n))
 
