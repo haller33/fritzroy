@@ -122,8 +122,8 @@
 	 (< (evale (cadr exp) env)
 	    (evale (caddr exp) env)))
 	((eqv? (car exp) 'sub1)
-	 (- (evale (caddr exp) env)
-	    (evale (cadr exp) env)))
+	 (- (evale (cadr exp) env)
+	    (evale (caddr exp) env)))
 	((eqv? (car exp) 'some1)
 	 (+ (evale (cadr exp) env)
 	    (evale (caddr exp) env)))
@@ -198,7 +198,7 @@
 (let ((n
        (evale '(((lambda (x)
 		  (lambda (s)
-		    (sub1 x s))) 55) 2)
+		    (sub1 x s))) 55) n)
 	      
 	      '((j 88)(n 5)))))
   (format #t "~A~%" n))
