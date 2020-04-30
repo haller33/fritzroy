@@ -125,6 +125,13 @@
 	((eqv? (car exp) '==)
 	 (eqv? (evale (cadr exp) env)
 	       (evale (caddr exp) env)))
+	((eqv? (car exp) 'and)
+	 (and (evale (cadr exp) env)
+	      (evale (caddr exp) env)))
+	((eqv? (car exp) 'or)
+	 (or (evale (cadr exp) env)
+	      (evale (caddr exp) env)))
+
 	((eqv? (car exp) '>)
 	 (> (evale (cadr exp) env)
 	    (evale (caddr exp) env)))	
