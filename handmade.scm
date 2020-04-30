@@ -1,6 +1,7 @@
-#!/data/data/com.termux/files/usr/bin/guile -s
-!#
-;; #! /nix/store/jw2522hjypr3dv8v2sjk8gmk4jywi43w-user-environment/bin/scheme --script
+#! /nix/store/jw2522hjypr3dv8v2sjk8gmk4jywi43w-user-environment/bin/scheme --script
+;;#!/data/data/com.termux/files/usr/bin/guile -s
+;; !#
+; 
 
 
 ;;;
@@ -90,7 +91,10 @@
 		     (cadr exp))))
 	((eqv? (car exp) 'define)
 	 (evale (if (list? (cadr exp))
-		    'nil
+		    (list 'set
+			  (caadr exp)
+			  (list 'lambda (cdadr exp)
+				(caddr exp)))
 		    (cons 'set
 			  (list (cadr exp)
 				(caddr exp))))
@@ -141,12 +145,15 @@
 		      env) env))
 	((eqv? (car exp) 'system-gc)
 	 (evale 'nil (gc env)))
-	
-	((and (symbol? (car exp))
-	      (symbol? (cadr exp))
+	((eqv? (car exp) '<PROCEDURE>)
+	 exp)
+	((eqv? (caar exp) 'lambda)
+	 (evale (list (evale (car exp) env)
+		      (cdr exp)) env))
+	((and (list? (car exp))
 	      (null? (cddr exp)))
 	 (applye (list (evale (car exp) env)
-		       (evale (cdr exp) env))))
+		       (cadr exp)) env))
 
 	(#t
 	 (write 'error)
@@ -154,27 +161,37 @@
 	 (write env)
 	 'nil)))
 
+(define (mapargs variables args env)
+  (define (mapargs-aps variables args acc)
+    (if (or (null? args) (null? variables))
+	acc
+	(mapargs-aps (cdr variables)
+		     (cdr args)
+		     (cons (list (car variables)
+				 (evale (car args) env))
+			   acc))))
+  (mapargs-aps variables args '()))
+
 
 (define (applye exp env)
-  (cond ((eqv? (caaar exp) '<PROCEDURE>)
+  (cond ((eqv? (caar exp) '<PROCEDURE>)
 	 (evale (cons 'let
-		      (list (list (cadddr exp))
-			    (caddr exp)) env)))))
-		 
-
+		      (list (mapargs (caddar exp) (cadr exp) env)
+			    (cadar exp))) env))))
 
 ;; debug mode
-;; (trace evale)
-;; (trace inenv?)
-;; (trace extraenv)
-;; (trace insidenv)
-;; (trace outsidenv)
-;; (trace gc)
+(trace evale)
+(trace inenv?)
+(trace extraenv)
+(trace insidenv)
+(trace outsidenv)
+(trace applye)
+(trace mapargs)
+(trace gc)
 
 
 (let ((n
-       (evale '(let ((n 88))
-		 (define g 77))
+       (evale '((lambda(x)x) 55)
 	      
 	      '((j 88)(n 5)))))
   (format #t "~A~%" n))
