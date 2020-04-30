@@ -161,9 +161,10 @@
 	 (write env)
 	 'nil)))
 
+
 (define (mapargs variables args env)
   (define (mapargs-aps variables args acc)
-    (if (or (null? args) (null? variables))
+    (if (or (atom? args) (null? args) (null? variables))
 	acc
 	(mapargs-aps (cdr variables)
 		     (cdr args)
@@ -191,7 +192,8 @@
 
 
 (let ((n
-       (evale '((lambda(x)x) 55)
+       (evale '((lambda(x s)
+		    (sub1 x s)) 55 2)
 	      
 	      '((j 88)(n 5)))))
   (format #t "~A~%" n))
