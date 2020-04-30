@@ -1,5 +1,7 @@
-#! /nix/store/jw2522hjypr3dv8v2sjk8gmk4jywi43w-user-environment/bin/scheme --script
-;;#!/data/data/com.termux/files/usr/bin/guile -s
+#!/data/data/com.termux/files/usr/bin/guile -s
+!#
+;; #! /nix/store/jw2522hjypr3dv8v2sjk8gmk4jywi43w-user-environment/bin/scheme --script
+;;
 ;; !#
 ; 
 
@@ -7,6 +9,10 @@
 ;;;
 ;; this is my own definition of Meta Circular Evaluator
 ;;
+
+(define atom?
+  (lambda (x)
+    (and (not (pair? x)) (not (null? x)))))
 
 (define (inenv? exp env)
   (define (ienvaps env acc)
@@ -72,6 +78,9 @@
 	 exp)
 	((inenv? exp env)
 	 (evale (extraenv exp env) env))
+	((inenv? (car exp) env)
+	 (evale (cons (extraenv (car exp) env)
+		      (cdr exp)) env))
 	((eqv? (car exp) '<PROCEDURE>)
 	 exp)
 	((eqv? (car exp) 'do) ;; TODO
@@ -152,8 +161,8 @@
 	((eqv? (caar exp) 'lambda)
 	 (evale (list (evale (car exp) env)
 		      (cdr exp)) env))
-	((and (list? (car exp))
-	      (null? (cddr exp)))
+	((or (list? (car exp))
+	     (atom? (car exp)))
 	 (applye (list (evale (car exp) env)
 		       (cadr exp)) env))
 
@@ -182,25 +191,31 @@
   (cond ((eqv? (caar exp) '<PROCEDURE>)
 	 (evale (cons 'let
 		      (list (mapargs (caddar exp) (cadr exp) (car (cdddar exp)))
-			    (cadar exp))) (car (cdddar exp))))))
+			    (cadar exp))) (car (cdddar exp))))
+	((atom? (car exp))
+	 (evale (list (evale (car exp) env)
+		      (cdr exp)) env))))
 
 ;; debug mode
-(trace evale)
-(trace inenv?)
-(trace extraenv)
-(trace insidenv)
-(trace outsidenv)
-(trace applye)
-(trace mapargs)
-(trace gc)
+;; (trace evale)
+;; (trace inenv?)
+;; (trace extraenv)
+;; (trace insidenv)
+;; (trace outsidenv)
+;; (trace applye)
+;; (trace mapargs)
+;; (trace gc)
 
 
 (let ((n
-       (evale '(((lambda (x)
-		  (lambda (s)
-		    (sub1 x s))) 55) n)
-	      
-	      '((j 88)(n 5)))))
+       (evale '(f g)	      
+	     '((j 88)
+	      (g j)
+	      (f (lambda(x)
+		  (if (== x 1)
+		  1
+		  (mult1 x (f (sub1 x 1))))))
+      	      (n 5)))))
   (format #t "~A~%" n))
 
 
