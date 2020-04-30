@@ -1,6 +1,7 @@
-#!/data/data/com.termux/files/usr/bin/guile -s
-!#
-;; #! /nix/store/jw2522hjypr3dv8v2sjk8gmk4jywi43w-user-environment/bin/scheme --script
+#! /nix/store/jw2522hjypr3dv8v2sjk8gmk4jywi43w-user-environment/bin/scheme --script
+;; #!/data/data/com.termux/files/usr/bin/guile -s
+;; !#
+;; 
 ;;
 ;; !#
 ; 
@@ -140,8 +141,9 @@
 	 (* (evale (cadr exp) env)
 	    (evale (caddr exp) env)))
 	((eqv? (car exp) 'if)
-	 (if (evale (cadr exp) env)
-	     (evale (caddr exp) env)))
+	 (evale (if (evale (cadr exp) env)
+		    (caddr exp)
+		    (cadddr exp)) env))
 	((eqv? (car exp) 'list)
 	 (list (evale (cadr exp) env)
 	       (evale (caddr exp) env)))
@@ -197,25 +199,25 @@
 		      (cdr exp)) env))))
 
 ;; debug mode
-;; (trace evale)
+(trace evale)
 ;; (trace inenv?)
-;; (trace extraenv)
+(trace extraenv)
 ;; (trace insidenv)
 ;; (trace outsidenv)
-;; (trace applye)
-;; (trace mapargs)
+(trace applye)
+(trace mapargs)
 ;; (trace gc)
 
 
 (let ((n
        (evale '(f g)	      
-	     '((j 88)
-	      (g j)
-	      (f (lambda(x)
-		  (if (== x 1)
-		  1
-		  (mult1 x (f (sub1 x 1))))))
-      	      (n 5)))))
+	      '((j 5)
+		(g j)
+		(f (lambda(x)
+		     (if (== x 1)
+			 1
+			 (mult1 x (f (sub1 x 1))))))
+		(n 5)))))
   (format #t "~A~%" n))
 
 
