@@ -51,7 +51,7 @@
 		    acc))))
   (gc-aps env (list (car env))))
 
-(define (dothis exp env)
+(define (dothis exp env) ;; TODO
   (if (null? (cdr exp))
       (caar exp)
       (evale 'nil env)))
@@ -72,6 +72,8 @@
 	 exp)
 	((inenv? exp env)
 	 (evale (extraenv exp env) env))
+	((eqv? (car exp) '<PROCEDURE>)
+	 exp)
 	((eqv? (car exp) 'do) ;; TODO
 	 (dothis (cdr exp) env))
 	((eqv? (car exp) 'set)
@@ -88,7 +90,8 @@
 	((eqv? (car exp) 'lambda)
 	 (cons '<PROCEDURE>
 	       (list (caddr exp)
-		     (cadr exp))))
+		     (cadr exp)
+		     env)))
 	((eqv? (car exp) 'define)
 	 (evale (if (list? (cadr exp))
 		    (list 'set
@@ -145,8 +148,7 @@
 		      env) env))
 	((eqv? (car exp) 'system-gc)
 	 (evale 'nil (gc env)))
-	((eqv? (car exp) '<PROCEDURE>)
-	 exp)
+	
 	((eqv? (caar exp) 'lambda)
 	 (evale (list (evale (car exp) env)
 		      (cdr exp)) env))
@@ -162,7 +164,7 @@
 	 'nil)))
 
 
-(define (mapargs variables args env)
+(define (mapargs variables args env) ;; TODO: Refactory
   (define (mapargs-aps variables args acc)
     (if (or (atom? args) (null? args) (null? variables))
 	acc
@@ -171,14 +173,16 @@
 		     (cons (list (car variables)
 				 (evale (car args) env))
 			   acc))))
-  (mapargs-aps variables args '()))
+  (if (atom? args)
+      (list (list (car variables) args))
+      (mapargs-aps variables args '())))
 
 
 (define (applye exp env)
   (cond ((eqv? (caar exp) '<PROCEDURE>)
 	 (evale (cons 'let
-		      (list (mapargs (caddar exp) (cadr exp) env)
-			    (cadar exp))) env))))
+		      (list (mapargs (caddar exp) (cadr exp) (car (cdddar exp)))
+			    (cadar exp))) (car (cdddar exp))))))
 
 ;; debug mode
 (trace evale)
@@ -192,8 +196,9 @@
 
 
 (let ((n
-       (evale '((lambda(x s)
-		    (sub1 x s)) 55 2)
+       (evale '(((lambda (x)
+		  (lambda (s)
+		    (sub1 x s))) 55) 2)
 	      
 	      '((j 88)(n 5)))))
   (format #t "~A~%" n))
