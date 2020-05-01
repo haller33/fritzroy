@@ -1,5 +1,7 @@
-#! /nix/store/jw2522hjypr3dv8v2sjk8gmk4jywi43w-user-environment/bin/scheme --script
-;; #!/data/data/com.termux/files/usr/bin/guile -s
+#!/data/data/com.termux/files/usr/bin/guile -s
+!#
+;; #! /nix/store/jw2522hjypr3dv8v2sjk8gmk4jywi43w-user-environment/bin/scheme --script
+;; 
 ;; !#
 ;; 
 ;;
@@ -32,11 +34,14 @@
 
 
 (define (insidenv frame env)
-  (if (or (null? frame) (number? frame))
-      env
-      (insidenv (cdr frame)
-		(cons (car frame)
-		      env))))
+  (define (inside frame env)
+    (if (or (null? frame) (number? frame))
+	env
+	(inside (cdr frame)
+		  (cons (car frame)
+			env))))
+  (inside frame env))
+  
 
 (define (outsidenv frame env)
   (if (or (null? env) (number? frame))
@@ -161,6 +166,7 @@
 	 (car (evale (cadr exp) env)))
 	((eqv? (car exp) 'cdr)
 	 (cdr (evale (cadr exp) env)))
+	
 	((eqv? (car exp) 'system-env)
       	 (evale (list 'quot
 		      env) env))
@@ -170,8 +176,7 @@
 	((eqv? (caar exp) 'lambda)
 	 (evale (list (evale (car exp) env)
 		      (cdr exp)) env))
-	((or (list? (car exp))
-	     (atom? (car exp)))
+	((list? (car exp))
 	 (applye (list (evale (car exp) env)
 		       (cadr exp)) env))
 
@@ -200,19 +205,16 @@
   (cond ((eqv? (caar exp) '<PROCEDURE>)
 	 (evale (cons 'let
 		      (list (mapargs (caddar exp) (cadr exp) (car (cdddar exp)))
-			    (cadar exp))) (car (cdddar exp))))
-	((atom? (car exp))
-	 (evale (list (evale (car exp) env)
-		      (cdr exp)) env))))
+			    (cadar exp))) (car (cdddar exp))))))
 
 ;; debug mode
-(trace evale)
+;; (trace evale)
 ;; (trace inenv?)
-(trace extraenv)
+;; (trace extraenv)
 ;; (trace insidenv)
 ;; (trace outsidenv)
-(trace applye)
-(trace mapargs)
+;; (trace applye)
+;; (trace mapargs)
 ;; (trace gc)
 
 
