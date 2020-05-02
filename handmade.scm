@@ -1,9 +1,7 @@
-#!/data/data/com.termux/files/usr/bin/guile -s
-!#
-;; #! /nix/store/jw2522hjypr3dv8v2sjk8gmk4jywi43w-user-environment/bin/scheme --script
-;; 
+;;#! /nix/store/jw2522hjypr3dv8v2sjk8gmk4jywi43w-user-environment/bin/scheme --script
+
+;; #!/data/data/com.termux/files/usr/bin/guile -s
 ;; !#
-;; 
 ;;
 ;; !#
 ; 
@@ -19,7 +17,8 @@
 
 (define (inenv? exp env)
   (define (ienvaps env acc)
-    (if (or (null? env) acc)
+    (if (or (not (list exp))
+	    (null? env) acc)
 	acc
 	(ienvaps (cdr env)
 		 (or (eqv? (caar env) exp)
@@ -64,17 +63,23 @@
   (gc-aps env (list (car env))))
 
 
-(define (dothis exp env) ;; TODO
-  (if (null? (cdr exp))
-      (evale (caar exp) env)
-      (evale (cons 'do
-		   (cdr exp))
-	     (evale (list (evale (cons 'lambda
-				       (list
-					'(x)
-					'(system-env))) env)
-			  (list (cadr exp)))
-		    env))))
+(define (dothis exp env) ;; TODO: create cps on the fly
+  (if (not (null? (cdr exp)))
+      (evale (list 'system-cps-done
+		   'system-list-cps-done
+		   '(lambda(x)(write x)))
+	     (cons
+	      (list 'system-list-cps-done
+		    exp)
+	      (cons (list 'system-cps-done
+			  '(lambda(lis cc)
+			     (if (null? (cdr lis))
+				 (cc (car lis))
+				 (system-cps-done
+				  (cdr lis)
+				  (lambda(x)
+				    (cc (evil (car lis) (system-env))))))))
+		    env)))))
 
 
 (define (evale exp env)
@@ -98,7 +103,7 @@
 	((eqv? (car exp) '<PROCEDURE>)
 	 exp)
 	((eqv? (car exp) 'do) ;; TODO
-	 (dothis (reverse (cdr exp)) env))
+	 (dothis (cdr exp) env))
 	((eqv? (car exp) 'set)
 	 (evale (caddr exp)
 		(cons (list (cadr exp)
@@ -126,13 +131,13 @@
 				(caddr exp))))
 		env))
 	((eqv? (car exp) 'quot)
-	 (cadr exp))
+	 exp)
 	((eqv? (car exp) 'eval)
 	 (evale (cadadr exp) '()))
 	((eqv? (car exp) 'evil)
-	 (evale (cadadr exp)
-		(evale (cadddr exp) env)))
-	
+	 (evale (cadr exp)
+		(evale (caddr exp) env)))
+
 	((eqv? (car exp) 'write)
 	 (write	(evale (cadr exp) env))
 	 'nil)
@@ -142,9 +147,13 @@
 	((eqv? (car exp) 'and)
 	 (and (evale (cadr exp) env)
 	      (evale (caddr exp) env)))
+	((eqv? (car exp) 'not)
+	 (not (evale (cadr exp) env)))
 	((eqv? (car exp) 'or)
 	 (or (evale (cadr exp) env)
 	     (evale (caddr exp) env)))
+	((eqv? (car exp) 'null?)
+	 (null? (evale (cadr exp) env)))
 
 	((eqv? (car exp) '>)
 	 (> (evale (cadr exp) env)
@@ -170,23 +179,23 @@
 	       (evale (caddr exp) env)))
 	((eqv? (car exp) 'cons)
 	 (cons (evale (cadr exp) env)
-	       (caddr exp)))
+	       (evale (caddr exp) env)))
 	((eqv? (car exp) 'car)
 	 (car (evale (cadr exp) env)))
 	((eqv? (car exp) 'cdr)
 	 (cdr (evale (cadr exp) env)))
 	
 	((eqv? (car exp) 'system-env)
-      	 (list 'quot env))
+      	 env)
 	((eqv? (car exp) 'system-gc)
 	 (evale 'nil (gc env)))
 
-	((eqv? (caar exp) 'lambda)
+	((and (not (null? (cdr exp)))
+	      (eqv? (caar exp) 'lambda))
 	 (evale (list (evale (car exp) env)
 		      (cdr exp)) env))
-	((list? (car exp))
-	 (applye (list (evale (car exp) env)
-		       (cadr exp)) env))
+	((list? exp)
+	 (applye exp env))
 
 	(#t
 	 (write 'error)
@@ -213,25 +222,26 @@
   (cond ((eqv? (caar exp) '<PROCEDURE>)
 	 (evale (cons 'let
 		      (list (mapargs (caddar exp) (cadr exp) (car (cdddar exp)))
-			    (cadar exp))) (car (cdddar exp))))))
+			    (cadar exp))) (car (cdddar exp))))
+	(#t
+	 exp)))
 
 ;; debug mode
-;; (trace evale)
+(trace evale)
 ;; (trace inenv?)
-;; (trace extraenv)
+(trace extraenv)
 ;; (trace insidenv)
 ;; (trace outsidenv)
-;; (trace applye)
+(trace applye)
 ;; (trace mapargs)
-;; (trace gc)
+(trace dothis)
 
-
-(let ((n
-       (evale '(do
-		   (write "hello world")
-		   (lambda(x)x))	      
-	      '())))
-  (format #t "~A~%" n))
-
+;(let ((n
+;       (evale '(do
+;		   (set n 99)
+;		   (write "hello world")
+;		 (lambda(x)x))
+;	      '())))
+ ; (format #t "~A~%" n))
 
 
