@@ -74,11 +74,11 @@
 	      (cons (list 'system-cps-done
 			  '(lambda(lis cc)
 			     (if (null? (cdr lis))
-				 (cc (car lis))
+				 (cc lis)
 				 (system-cps-done
 				  (cdr lis)
 				  (lambda(x)
-				    (cc (evil (car lis) (system-env))))))))
+				    (cc lis))))))
 		    env)))))
 
 
@@ -135,8 +135,8 @@
 	((eqv? (car exp) 'eval)
 	 (evale (cadadr exp) '()))
 	((eqv? (car exp) 'evil)
-	 (evale (cadr exp)
-		(evale (caddr exp) env)))
+	 (evale (cadadr exp)
+		(evale (cadddr exp) env)))
 
 	((eqv? (car exp) 'write)
 	 (write	(evale (cadr exp) env))
@@ -186,7 +186,7 @@
 	 (cdr (evale (cadr exp) env)))
 	
 	((eqv? (car exp) 'system-env)
-      	 env)
+      	 (list 'quot env))
 	((eqv? (car exp) 'system-gc)
 	 (evale 'nil (gc env)))
 
@@ -236,12 +236,15 @@
 ;; (trace mapargs)
 (trace dothis)
 
+
+
+
 ;(let ((n
 ;       (evale '(do
 ;		   (set n 99)
 ;		   (write "hello world")
 ;		 (lambda(x)x))
 ;	      '())))
- ; (format #t "~A~%" n))
+;  (format #t "~A~%" n))
 
 
