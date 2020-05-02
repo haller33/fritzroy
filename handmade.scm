@@ -63,10 +63,18 @@
 		    acc))))
   (gc-aps env (list (car env))))
 
+
 (define (dothis exp env) ;; TODO
   (if (null? (cdr exp))
-      (caar exp)
-      (evale 'nil env)))
+      (evale (caar exp) env)
+      (evale (cons 'do
+		   (cdr exp))
+	     (evale (list (evale (cons 'lambda
+				       (list
+					'(x)
+					'(system-env))) env)
+			  (list (cadr exp)))
+		    env))))
 
 
 (define (evale exp env)
@@ -90,7 +98,7 @@
 	((eqv? (car exp) '<PROCEDURE>)
 	 exp)
 	((eqv? (car exp) 'do) ;; TODO
-	 (dothis (cdr exp) env))
+	 (dothis (reverse (cdr exp)) env))
 	((eqv? (car exp) 'set)
 	 (evale (caddr exp)
 		(cons (list (cadr exp)
@@ -124,6 +132,7 @@
 	((eqv? (car exp) 'evil)
 	 (evale (cadadr exp)
 		(evale (cadddr exp) env)))
+	
 	((eqv? (car exp) 'write)
 	 (write	(evale (cadr exp) env))
 	 'nil)
@@ -135,7 +144,7 @@
 	      (evale (caddr exp) env)))
 	((eqv? (car exp) 'or)
 	 (or (evale (cadr exp) env)
-	      (evale (caddr exp) env)))
+	     (evale (caddr exp) env)))
 
 	((eqv? (car exp) '>)
 	 (> (evale (cadr exp) env)
@@ -168,11 +177,10 @@
 	 (cdr (evale (cadr exp) env)))
 	
 	((eqv? (car exp) 'system-env)
-      	 (evale (list 'quot
-		      env) env))
+      	 (list 'quot env))
 	((eqv? (car exp) 'system-gc)
 	 (evale 'nil (gc env)))
-	
+
 	((eqv? (caar exp) 'lambda)
 	 (evale (list (evale (car exp) env)
 		      (cdr exp)) env))
@@ -219,14 +227,10 @@
 
 
 (let ((n
-       (evale '(f g)	      
-	      '((j 5)
-		(g j)
-		(f (lambda(x)
-		     (if (== x 1)
-			 1
-			 (mult1 x (f (sub1 x 1))))))
-		(n 5)))))
+       (evale '(do
+		   (write "hello world")
+		   (lambda(x)x))	      
+	      '())))
   (format #t "~A~%" n))
 
 
