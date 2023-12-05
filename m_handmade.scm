@@ -27,6 +27,12 @@
 ;;; this actual project, is to try to implement
 ;;; a monadic compostion of evaluations of evalo/lambda/procedure
 ;;;
+;;; on the past, i have add a (()) list of
+;;; list of elements for the interpreter..
+;;; so...
+;;; this is way extraenv is not working, it's not dealing
+;;; with a data structure, expected
+;;; #TODOO: correct this thing .
 
 ;;;
 ;; this is my own definition of Meta Circular Evaluator
@@ -36,204 +42,214 @@
   (lambda (x)
     (and (not (pair? x)) (not (null? x)))))
 
+
 (define (inenv? exp env)
   (define (ienvaps env acc)
     (if (or (not (list exp))
-	    (null? env) acc)
-	acc
-	(ienvaps (cdr env)
-		 (or (eqv? (caar env) exp)
-		     acc))))
-  (ienvaps env #f))
+			(null? env) acc)
+		acc
+		(ienvaps (cdr env)
+				 (or (eqv? (caar env) exp)
+					 acc))))
+  env)
 
 
+;; (define (extraenv exp env)
+;;  (if (eqv? (caar env) exp)
+;;	  (cadar env)
+;;	  (extraenv exp (cdr env))))
+;;
+;;; the problem is here
 (define (extraenv exp env)
-  (if (eqv? (caar env) exp)
-      (cadar env)
-      (extraenv exp (cdr env))))
+  (if (and (not (null? (car env)))
+		   (eqv? (caar env) exp))
+	  (cadar env)
+	  (extraenv exp (cdr env))))
 
 
 (define (insidenv frame env)
   (define (inside frame env)
     (if (or (null? frame) (number? frame))
-	env
-	(inside (cdr frame)
-		  (cons (car frame)
-			env))))
+		env
+		(inside (cdr frame)
+				(cons (car frame)
+					  env))))
   (inside frame env))
-  
+
 
 (define (outsidenv frame env)
   (if (or (null? env) (number? frame))
       env
       (insidenv (cdr frame)
-		(cdr env))))
+				(cdr env))))
 
 (define (gc env)
   (define (exist? item lst)
     (and (not (null? lst))
-	 (or (eqv? item (caar lst))
-	     (exist? item (cdr lst)))))
+		 (or (eqv? item (caar lst))
+			 (exist? item (cdr lst)))))
   (define (gc-aps env acc)
     (if (null? env)
-	(reverse acc)
-	(gc-aps (cdr env)
-		(if (not (exist? (caar env) acc))
-		    (cons (car env) acc)
-		    acc))))
+		(reverse acc)
+		(gc-aps (cdr env)
+				(if (not (exist? (caar env) acc))
+					(cons (car env) acc)
+					acc))))
   (gc-aps env (list (car env))))
 
 
 (define (dothis exp env) ;; TODO: create cps on the fly
   (if (not (null? (cdr exp)))
       (evale (list 'system-cps-done
-		   'system-list-cps-done
-		   '(lambda(x)(write x)))
-	     (cons
-	      (list 'system-list-cps-done
-		    exp)
-	      (cons (list 'system-cps-done
-			  '(lambda(lis cc)
-			     (if (null? (cdr lis))
-				 (cc lis)
-				 (system-cps-done
-				  (cdr lis)
-				  (lambda(x)
-				    (cc lis))))))
-		    env)))))
+				   'system-list-cps-done
+				   '(lambda(x)(write x)))
+			 (cons
+			  (list 'system-list-cps-done
+					exp)
+			  (cons (list 'system-cps-done
+						  '(lambda(lis cc)
+							 (if (null? (cdr lis))
+								 (cc lis)
+								 (system-cps-done
+								  (cdr lis)
+								  (lambda(x)
+									(cc lis))))))
+					env)))))
 
 
 (define (evale exp env)
   (cond ((eqv? exp 'nil)
-	 '())
-	((eqv? exp '#f)
-	 #f)
-	((eqv? exp '#t)
-	 #t)
-	((string? exp)
-	 exp)
+		 '())
+		((eqv? exp '#f)
+		 #f)
+		((eqv? exp '#t)
+		 #t)
+		((string? exp)
+		 exp)
         ((null? exp)
-	 'nil)
-	((number? exp)
-	 exp)
-	((inenv? exp env)
-	 (evale (extraenv exp env) env))
-	((inenv? (car exp) env)
-	 (evale (cons (extraenv (car exp) env)
-		      (cdr exp)) env))
-	((eqv? (car exp) '<PROCEDURE>)
-	 exp)
-	((eqv? (car exp) 'do) ;; TODO
-	 (dothis (cdr exp) env))
-	((eqv? (car exp) 'set)
-	 (evale (caddr exp)
-		(cons (list (cadr exp)
-			    (evale (caddr exp) env))
-		      env)))
-	
-	((eqv? (car exp) 'let)
-	 (evale (evale (caddr exp)
-		       (insidenv (cadr exp) env))
-		(outsidenv (cadr exp) env)))
-	
-	((eqv? (car exp) 'lambda)
-	 (cons '<PROCEDURE>
-	       (list (caddr exp)
-		     (cadr exp)
-		     env)))
-	((eqv? (car exp) 'define)
-	 (evale (if (list? (cadr exp))
-		    (list 'set
-			  (caadr exp)
-			  (list 'lambda (cdadr exp)
-				(caddr exp)))
-		    (cons 'set
-			  (list (cadr exp)
-				(caddr exp))))
-		env))
-	((eqv? (car exp) 'quot)
-	 exp)
-	((eqv? (car exp) 'eval)
-	 (evale (cadadr exp) '()))
-	((eqv? (car exp) 'evil)
-	 (evale (cadadr exp)
-		(evale (cadddr exp) env)))
+		 'nil)
+		((number? exp)
+		 exp)
 
-	((eqv? (car exp) 'write)
-	 (write	(evale (cadr exp) env))
-	 'nil)
-	((eqv? (car exp) '==)
-	 (eqv? (evale (cadr exp) env)
-	       (evale (caddr exp) env)))
-	((eqv? (car exp) 'and)
-	 (and (evale (cadr exp) env)
-	      (evale (caddr exp) env)))
-	((eqv? (car exp) 'not)
-	 (not (evale (cadr exp) env)))
-	((eqv? (car exp) 'or)
-	 (or (evale (cadr exp) env)
-	     (evale (caddr exp) env)))
-	((eqv? (car exp) 'null?)
-	 (null? (evale (cadr exp) env)))
+		((inenv? exp env)
+		 (evale (extraenv exp env) env))
 
-	((eqv? (car exp) '>)
-	 (> (evale (cadr exp) env)
-	    (evale (caddr exp) env)))	
-	((eqv? (car exp) '<)
-	 (< (evale (cadr exp) env)
-	    (evale (caddr exp) env)))
-	((eqv? (car exp) 'sub1)
-	 (- (evale (cadr exp) env)
-	    (evale (caddr exp) env)))
-	((eqv? (car exp) 'some1)
-	 (+ (evale (cadr exp) env)
-	    (evale (caddr exp) env)))
-	((eqv? (car exp) 'mult1)
-	 (* (evale (cadr exp) env)
-	    (evale (caddr exp) env)))
-	((eqv? (car exp) 'if)
-	 (evale (if (evale (cadr exp) env)
-		    (caddr exp)
-		    (cadddr exp)) env))
-	((eqv? (car exp) 'list)
-	 (list (evale (cadr exp) env)
-	       (evale (caddr exp) env)))
-	((eqv? (car exp) 'cons)
-	 (cons (evale (cadr exp) env)
-	       (evale (caddr exp) env)))
-	((eqv? (car exp) 'car)
-	 (car (evale (cadr exp) env)))
-	((eqv? (car exp) 'cdr)
-	 (cdr (evale (cadr exp) env)))
-	
-	((eqv? (car exp) 'system-env)
+		((inenv? (car exp) env)
+		 (evale (cons (extraenv (car exp) env)
+					  (cdr exp)) env))
+
+       	((eqv? (car exp) '<PROCEDURE>)
+		 exp)
+		((eqv? (car exp) 'do) ;; TODO
+		 (dothis (cdr exp) env))
+		((eqv? (car exp) 'set)
+		 (evale (caddr exp)
+				(cons (list (cadr exp)
+							(evale (caddr exp) env))
+					  env)))
+		((eqv? (car exp) 'let)
+		 (evale (evale (caddr exp)
+					   (insidenv (cadr exp) env))
+				(outsidenv (cadr exp) env)))
+
+		((eqv? (car exp) 'lambda)
+		 (cons '<PROCEDURE>
+			   (list (caddr exp)
+					 (cadr exp)
+					 env)))
+		((eqv? (car exp) 'define)
+		 (evale (if (list? (cadr exp))
+					(list 'set
+						  (caadr exp)
+						  (list 'lambda (cdadr exp)
+								(caddr exp)))
+					(cons 'set
+						  (list (cadr exp)
+								(caddr exp))))
+				env))
+		((eqv? (car exp) 'quot)
+		 exp)
+		((eqv? (car exp) 'eval)
+		 (evale (cadadr exp) '()))
+		((eqv? (car exp) 'evil)
+		 (evale (cadadr exp)
+				(evale (cadddr exp) env)))
+
+		((eqv? (car exp) 'write)
+		 (write	(evale (cadr exp) env))
+		 'nil)
+		((eqv? (car exp) '==)
+		 (eqv? (evale (cadr exp) env)
+			   (evale (caddr exp) env)))
+		((eqv? (car exp) 'and)
+		 (and (evale (cadr exp) env)
+			  (evale (caddr exp) env)))
+		((eqv? (car exp) 'not)
+		 (not (evale (cadr exp) env)))
+		((eqv? (car exp) 'or)
+		 (or (evale (cadr exp) env)
+			 (evale (caddr exp) env)))
+		((eqv? (car exp) 'null?)
+		 (null? (evale (cadr exp) env)))
+
+		((eqv? (car exp) '>)
+		 (> (evale (cadr exp) env)
+			(evale (caddr exp) env)))
+		((eqv? (car exp) '<)
+		 (< (evale (cadr exp) env)
+			(evale (caddr exp) env)))
+		((eqv? (car exp) 'sub1)
+		 (- (evale (cadr exp) env)
+			(evale (caddr exp) env)))
+		((eqv? (car exp) 'some1)
+		 (+ (evale (cadr exp) env)
+			(evale (caddr exp) env)))
+		((eqv? (car exp) 'mult1)
+		 (* (evale (cadr exp) env)
+			(evale (caddr exp) env)))
+		((eqv? (car exp) 'if)
+		 (evale (if (evale (cadr exp) env)
+					(caddr exp)
+					(cadddr exp)) env))
+		((eqv? (car exp) 'list)
+		 (list (evale (cadr exp) env)
+			   (evale (caddr exp) env)))
+		((eqv? (car exp) 'cons)
+		 (cons (evale (cadr exp) env)
+			   (evale (caddr exp) env)))
+		((eqv? (car exp) 'car)
+		 (car (evale (cadr exp) env)))
+		((eqv? (car exp) 'cdr)
+		 (cdr (evale (cadr exp) env)))
+
+		((eqv? (car exp) 'system-env)
       	 (list 'quot env))
-	((eqv? (car exp) 'system-gc)
-	 (evale 'nil (gc env)))
+		((eqv? (car exp) 'system-gc)
+		 (evale 'nil (gc env)))
 
-	((and (not (null? (cdr exp)))
-	      (eqv? (caar exp) 'lambda))
-	 (evale (list (evale (car exp) env)
-		      (cdr exp)) env))
-	((list? exp)
-	 (applye exp env))
+		((and (not (null? (cdr exp)))
+			  (eqv? (caar exp) 'lambda))
+		 (evale (list (evale (car exp) env)
+					  (cdr exp)) env))
+		((list? exp)
+		 (applye exp env))
 
-	(#t
-	 (write 'error)
-	 (write exp)
-	 (write env)
-	 'nil)))
+		(#t
+		 (write 'error)
+		 (write exp)
+		 (write env)
+		 'nil)))
 
 
 (define (mapargs variables args env) ;; TODO: Refactory
   (define (mapargs-aps variables args acc)
     (if (or (atom? args) (null? args) (null? variables))
-	acc
-	(mapargs-aps (cdr variables)
-		     (cdr args)
-		     (cons (list (car variables)
-				 (evale (car args) env))
-			   acc))))
+		acc
+		(mapargs-aps (cdr variables)
+					 (cdr args)
+					 (cons (list (car variables)
+								 (evale (car args) env))
+						   acc))))
   (if (atom? args)
       (list (list (car variables) args))
       (mapargs-aps variables args '())))
@@ -241,11 +257,11 @@
 
 (define (applye exp env)
   (cond ((eqv? (caar exp) '<PROCEDURE>)
-	 (evale (cons 'let
-		      (list (mapargs (caddar exp) (cadr exp) (car (cdddar exp)))
-			    (cadar exp))) (car (cdddar exp))))
-	(#t
-	 exp)))
+		 (evale (cons 'let
+					  (list (mapargs (caddar exp) (cadr exp) (car (cdddar exp)))
+							(cadar exp))) (car (cdddar exp))))
+		(#t
+		 exp)))
 
 ;; debug mode
 (trace evale)
@@ -260,12 +276,10 @@
 
 
 
-;(let ((n
-;       (evale '(do
-;		   (set n 99)
-;		   (write "hello world")
-;		 (lambda(x)x))
-;	      '())))
-;  (format #t "~A~%" n))
-
-
+;;(let ((n
+;;       (evale '(do
+;;		   (set n 99)
+;;		   (write "hello world")
+;;		 (lambda(x)x))
+;;	      '())))
+;;  (format #t "~A~%" n))
