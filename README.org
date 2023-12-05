@@ -1,0 +1,20 @@
+#+title: Fritzroy
+
+** the Idea
+
+Experiments on interpreters and self evaluated interpreters on Scheme and Lisp
+
+understanding the fundamental structures of computer science and understanding fo interpretation
+self interpretation and beeond
+
+** whats next ?
+
+The current situation are, we do need to create state since our **handmade** interpreters
+have problems because is a pure-function with no side effects or hability to comunicate with the
+outside world... quess what ? we have learning how to make they finaly realise they
+gen of knowlegde to us... using Monad and category theory for composition and 'self' evaluation (future!)
+
+
+** thanks
+
+to my self, to put your self on this road of descovery and questions
