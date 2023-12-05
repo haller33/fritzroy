@@ -21,6 +21,8 @@ gen of knowlegde to us... using Monad and category theory for composition and 's
 
 - the worder of doing this project, we need to first, create a safe handmade with `do` notation
 
+- use a monadic compostions and SKI combinators.. for use on the interpreter (for posterity)
+
 - then port what we have done, need to use it on repl.evil.scm
 
 - then you know...
