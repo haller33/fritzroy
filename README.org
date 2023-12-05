@@ -15,6 +15,22 @@ outside world... quess what ? we have learning how to make they finaly realise t
 gen of knowlegde to us... using Monad and category theory for composition and 'self' evaluation (future!)
 
 
+*** List TODO
+
+- welll first lets see
+
+- the worder of doing this project, we need to first, create a safe handmade with `do` notation
+
+- then port what we have done, need to use it on repl.evil.scm
+
+- then you know...
+
+try some forms of evalution, check Lucas implementation of the by the book implementation of a META-Circular Evaluator
+
+try new forms of enviropment using lambdas and try to
+
+- this is a trick question, try to get context from on interpreter and pass to another and then change the interpreter and change the way the intepreter, interpret it'self... shul be a interresting problem.... you know ? you know
+
 ** thanks
 
 to my self, to put your self on this road of descovery and questions
