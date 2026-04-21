@@ -114,6 +114,62 @@
      (else
       (cons (car l) (filter-out f (cdr l)))))))
 
+;; filter out simple
+(define filter-out-s
+  (lambda (f l)
+    (cond
+     ((null? l)
+      '())
+     ((not (f (car l)))
+      (cons (car l) (filter-out-s f (cdr l))))
+     (else
+      (filter-out-s f (cdr l))))))
+
+;; filter-out-acc
+;;
+;; (filter-acc odd? '(1 2 3 4) '())
+(define filter-acc
+  (lambda (f l acc)
+    (cond
+     ((null? l)
+      acc)
+     ((not (f (car l)))
+      (filter-acc f (cdr l) (cons (car l) (cdr l))))
+     (else
+      (filter-acc f (cdr l) (cdr l))))))
+
+
+;; filter-out-cps
+;;
+;; (filter-cps odd? '(1 2 3 4 5 6 7 8 9) (lambda(x) x)) => '(2 4 6 8)
+(define filter-cps
+  (lambda (f l cc)
+    (cond
+     ((null? l)
+      (reverse (cc l)))
+     ((not (f (car l)))
+      (filter-cps f (cdr l) (lambda (ll)
+                              (cons (car l) (cc ll)))))
+     (else
+      (filter-cps f (cdr l) (lambda (ll)
+                              (cc ll)))))))
+
+;;; filter-out-cps-no-reverse
+;;
+;; (filter-cps-nr odd? '(1 2 3 4 5 6 7 8 9) (lambda(x) x)) => '(2 4 6 8)
+(define filter-cps-nr
+  (lambda (f l cc)
+    (cond
+     ((null? l)
+      (cc l))
+     ((not (f (car l)))
+      (filter-cps-nr f (cdr l) (lambda (ll)
+                                 (cc (cons (car l) ll)))))
+     (else
+      (filter-cps-nr f (cdr l) (lambda (ll)
+                              (cc ll)))))))
+
+
 ;;; test cases for map
 ;;
 ;; (map (lambda (X) x) '()) => '()
