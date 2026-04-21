@@ -54,4 +54,4 @@
     (eval-lambda-expr
      '(lambda(x)x)
      (lambda(x)
-	     (error 'x "envirompment")))))
+	   (error 'x "envirompment")))))
